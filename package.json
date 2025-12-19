@@ -1,0 +1,24 @@
+{
+  "name": "neo",
+  "private": true,
+  "engines": {
+    "node": "^24.11.1",
+    "pnpm": "^10.19.0"
+  },
+  "packageManager": "pnpm@10.26.1+sha512.664074abc367d2c9324fdc18037097ce0a8f126034160f709928e9e9f95d98714347044e5c3164d65bd5da6c59c6be362b107546292a8eecb7999196e5ce58fa",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --concurrency 11 ",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "typecheck": "turbo run typecheck",
+    "clean": "git clean -xdf node_modules",
+    "clean:workspaces": "turbo run clean"
+  },
+  "devDependencies": {
+    "dotenv-cli": "catalog:",
+    "prettier": "catalog:",
+    "turbo": "^2.6.3",
+    "typescript": "catalog:"
+  }
+}

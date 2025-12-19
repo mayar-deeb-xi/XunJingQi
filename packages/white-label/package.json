@@ -1,0 +1,24 @@
+{
+  "name": "@acme/white-label",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./admin-app": "./src/admin-app/index.ts",
+    "./operator-app": "./src/operator-app/index.ts",
+    "./web-app": "./src/web-app/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "clean": "git clean -xdf .cache .turbo dist node_modules"
+  },
+  "dependencies": {
+    "lucide-react": "^0.548.0"
+  },
+  "devDependencies": {
+    "@acme/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "license": "MIT"
+}
