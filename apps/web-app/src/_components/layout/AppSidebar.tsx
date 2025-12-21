@@ -1,6 +1,6 @@
 'use client';
 
-import { HelpCircle, LayoutDashboard, Settings } from 'lucide-react';
+import { BookOpen, Coins, HelpCircle, LayoutDashboard, Settings } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '@acme/ui';
@@ -29,6 +29,21 @@ const navGroups = [
         title: 'Dashboard',
         url: '/',
         icon: LayoutDashboard,
+      },
+      {
+        title: 'Rates',
+        url: '/rates',
+        icon: Coins,
+      },
+    ],
+  },
+  {
+    label: 'Lab',
+    items: [
+      {
+        title: 'Research',
+        url: '/research',
+        icon: BookOpen,
       },
     ],
   },
