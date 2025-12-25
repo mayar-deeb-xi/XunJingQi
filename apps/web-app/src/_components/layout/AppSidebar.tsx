@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, Coins, HelpCircle, LayoutDashboard, Settings } from 'lucide-react';
+import { ArrowRightLeft, BookOpen, Coins, HelpCircle, LayoutDashboard, Router, Settings } from 'lucide-react';
 import * as React from 'react';
 
 import { cn } from '@acme/ui';
@@ -31,6 +31,11 @@ const navGroups = [
         icon: LayoutDashboard,
       },
       {
+        title: 'Swap',
+        url: '/swap',
+        icon: ArrowRightLeft,
+      },
+      {
         title: 'Rates',
         url: '/rates',
         icon: Coins,
@@ -44,6 +49,11 @@ const navGroups = [
         title: 'Research',
         url: '/research',
         icon: BookOpen,
+      },
+      {
+        title: 'Uniswap V2 Router',
+        url: '/research/uniswap/v2/router',
+        icon: Router,
       },
     ],
   },

@@ -4,11 +4,13 @@ import { validateEnv } from './config/env-validation.schema';
 
 import { ViemModule } from './lib/viem/viem.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { TokenModule } from './token/token.module';
 
 @Module({
   imports: [
     ViemModule,
     MetricsModule,
+    TokenModule,
     ConfigModule.forRoot({
       validate: validateEnv,
       isGlobal: true, // Make config available globally
