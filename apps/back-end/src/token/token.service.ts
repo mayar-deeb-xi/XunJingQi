@@ -51,4 +51,12 @@ export class TokenService {
       data: this.tokensByChain[chainId] ?? [],
     };
   }
+
+  findTokenByAddress(chainId: number, address: string): TokenEntity | null {
+    const tokens = this.tokensByChain[chainId] ?? [];
+    const match = tokens.find(
+      (token) => token.address.toLowerCase() === address.toLowerCase(),
+    );
+    return match ?? null;
+  }
 }

@@ -10,13 +10,8 @@ export const envValidationSchema = z.object({
   }, z.number().int().min(1).max(65535)),
 
   // Blockchain Configuration
-  CHAIN_RPC_URL: z.string().min(1, 'CHAIN_RPC_URL is required'),
-  CHAIN_ID: z.preprocess((val) => {
-    if (val === undefined || val === '') {
-      throw new Error('CHAIN_ID is required');
-    }
-    return parseInt(String(val), 10);
-  }, z.number().int().positive()),
+  RPC_URL_11155111: z.string().min(1, 'RPC_URL_11155111 is required'),
+  RPC_URL_1: z.string().min(1, 'RPC_URL_1 is required'),
 });
 
 export type Env = z.infer<typeof envValidationSchema>;
