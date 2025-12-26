@@ -13,7 +13,7 @@ export interface MethodParametersSummary {
   to: string;
 }
 
-export interface QuoteResponse {
+export interface FormattedSwapRoute {
   quote: FormattedAmount;
   quoteGasAdjusted?: FormattedAmount;
   estimatedGasUsed: string;

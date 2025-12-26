@@ -13,20 +13,21 @@ import {
 import {
   AlphaRouter,
   SwapOptionsSwapRouter02,
-  SwapRoute,
+  SwapOptionsUniversalRouter,
   SwapType,
 } from '@uniswap/smart-order-router';
 import { getAddress, parseUnits } from 'ethers/lib/utils';
-import { BaseResponse } from '../../lib/base.dto';
 import { Erc20Service } from '../../lib/erc20/erc20.service';
 import { RpcService } from '../../lib/rpc/rpc.service';
 
+import { RouterName, UniversalRouterVersion } from '../../enums';
 import {
-  QuoteRequestDto,
   QuoteTradeType,
+  SwapRouteRequestDto,
   TokenInputDto,
-} from '../aggregator/dto/quote.dto';
-import { FormattedAmount, QuoteResponse } from './dto/path-response.dto';
+} from '../aggregator/dto/swap-route.dto';
+import { SwapRouteEntity } from '../aggregator/entities/swap-route.entity';
+import { RouteFormatterService } from './route-formatter.service';
 
 const NATIVE_TOKEN_PLACEHOLDER = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
@@ -38,11 +39,10 @@ export class UniswapRouterService {
   constructor(
     private readonly rpcService: RpcService,
     private readonly erc20Service: Erc20Service,
+    private readonly routeFormatterService: RouteFormatterService,
   ) {}
 
-  async findBestRoute(
-    dto: QuoteRequestDto,
-  ): Promise<BaseResponse<QuoteResponse>> {
+  async findSwapRoute(dto: SwapRouteRequestDto): Promise<SwapRouteEntity> {
     const requestChainId = dto.chainId;
 
     // Validate that the requested chain ID is supported
@@ -78,6 +78,91 @@ export class UniswapRouterService {
       dto.amount,
     );
 
+    const { route, router: routerName } = await this.executeRoute(
+      router,
+      amountSpecified,
+      quoteCurrency,
+      tradeType,
+      dto,
+    );
+
+    if (!route) {
+      throw new BadRequestException('No route found for the requested swap');
+    }
+
+    return {
+      router: routerName,
+      route: this.routeFormatterService.mapRouteToResponse(route),
+    };
+  }
+
+  private async executeRoute(
+    router: AlphaRouter,
+    amountSpecified: CurrencyAmount<Currency>,
+    quoteCurrency: Currency,
+    tradeType: TradeType,
+    dto: SwapRouteRequestDto,
+  ) {
+    // Try Universal Router V2
+    try {
+      const swapOptions: SwapOptionsUniversalRouter = {
+        type: SwapType.UNIVERSAL_ROUTER,
+        version: UniversalRouterVersion.V2_0,
+        recipient: dto.recipient,
+        slippageTolerance: new Percent(
+          dto.slippageToleranceBps ?? this.defaultSlippageBps,
+          10_000,
+        ),
+        deadlineOrPreviousBlockhash:
+          Math.floor(Date.now() / 1000) +
+          (dto.deadlineSeconds ?? this.defaultDeadlineSeconds),
+      };
+
+      return {
+        router: RouterName.UNISWAP_UniversalRouterV2_0,
+        route: await router.route(
+          amountSpecified,
+          quoteCurrency,
+          tradeType,
+          swapOptions,
+        ),
+      };
+    } catch (error) {
+      console.warn('Universal Router V2 failed, attempting V1.2:', error);
+    }
+
+    // Try Universal Router V1.2
+    try {
+      const swapOptions: SwapOptionsUniversalRouter = {
+        type: SwapType.UNIVERSAL_ROUTER,
+        version: UniversalRouterVersion.V1_2,
+        recipient: dto.recipient,
+        slippageTolerance: new Percent(
+          dto.slippageToleranceBps ?? this.defaultSlippageBps,
+          10_000,
+        ),
+        deadlineOrPreviousBlockhash:
+          Math.floor(Date.now() / 1000) +
+          (dto.deadlineSeconds ?? this.defaultDeadlineSeconds),
+      };
+
+      return {
+        router: RouterName.UNISWAP_UniversalRouterV1_2,
+        route: await router.route(
+          amountSpecified,
+          quoteCurrency,
+          tradeType,
+          swapOptions,
+        ),
+      };
+    } catch (error) {
+      console.warn(
+        'Universal Router V1.2 failed, attempting SwapRouter02:',
+        error,
+      );
+    }
+
+    // Fallback to SwapRouter02
     const swapOptions: SwapOptionsSwapRouter02 = {
       type: SwapType.SWAP_ROUTER_02,
       recipient: dto.recipient,
@@ -90,69 +175,14 @@ export class UniswapRouterService {
         (dto.deadlineSeconds ?? this.defaultDeadlineSeconds),
     };
 
-    const route = await router.route(
-      amountSpecified,
-      quoteCurrency,
-      tradeType,
-      swapOptions,
-    );
-
-    if (!route) {
-      throw new BadRequestException('No route found for the requested swap');
-    }
-
     return {
-      data: this.mapRouteToResponse(route),
-    };
-  }
-
-  private mapRouteToResponse(route: SwapRoute): QuoteResponse {
-    return {
-      quote: this.formatCurrencyAmount(route.quote)!,
-      quoteGasAdjusted: this.formatCurrencyAmount(
-        route.quoteGasAndPortionAdjusted,
+      router: RouterName.UNISWAP_SWAP_ROUTER_02,
+      route: await router.route(
+        amountSpecified,
+        quoteCurrency,
+        tradeType,
+        swapOptions,
       ),
-      estimatedGasUsed: route.estimatedGasUsed.toString(),
-      estimatedGasUsedQuoteToken: this.formatCurrencyAmount(
-        route.estimatedGasUsedQuoteToken,
-      ),
-      estimatedGasUsedUSD: this.formatCurrencyAmount(route.estimatedGasUsedUSD),
-      gasPriceWei: route.gasPriceWei.toString(),
-      blockNumber: route.blockNumber.toString(),
-      methodParameters: route.methodParameters && {
-        calldata: route.methodParameters.calldata,
-        value: route.methodParameters.value,
-        to: route.methodParameters.to,
-      },
-      simulationStatus: route.simulationStatus,
-      routePath: this.formatRoutePath(route.route),
-      portionAmount: this.formatCurrencyAmount(route.portionAmount),
-    };
-  }
-
-  private formatRoutePath(route: SwapRoute['route']): string[][] {
-    return route.map((path) =>
-      path.tokenPath.map((currency) => {
-        const symbol = this.getCurrencySymbol(currency);
-        const address = this.getCurrencyAddress(currency);
-        return address ? `${symbol}:${address}` : symbol;
-      }),
-    );
-  }
-
-  private formatCurrencyAmount(
-    amount?: CurrencyAmount<Currency> | null,
-  ): FormattedAmount | undefined {
-    if (!amount) return undefined;
-
-    const currency = amount.currency;
-    return {
-      amount: amount.toExact(),
-      amountRaw: amount.quotient.toString(),
-      decimals: currency.decimals,
-      symbol: this.getCurrencySymbol(currency),
-      currencyAddress: this.getCurrencyAddress(currency),
-      isNative: currency.isNative,
     };
   }
 
@@ -195,20 +225,5 @@ export class UniswapRouterService {
       throw new BadRequestException('amount must be greater than zero');
     }
     return CurrencyAmount.fromRawAmount(currency, parsed.toString());
-  }
-
-  private getCurrencyAddress(currency: Currency): string | undefined {
-    if ((currency as Token).isToken) {
-      return (currency as Token).address;
-    }
-    return undefined;
-  }
-
-  private getCurrencySymbol(currency: Currency): string {
-    if ((currency as Token).isToken) {
-      return (currency as Token).symbol ?? 'TOKEN';
-    }
-
-    return currency.symbol ?? 'NATIVE';
   }
 }

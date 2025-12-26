@@ -26,7 +26,7 @@ export class TokenInputDto {
   address: string;
 }
 
-export class QuoteRequestDto {
+export class SwapRouteRequestDto {
   @IsInt()
   @Min(1)
   chainId: number;
